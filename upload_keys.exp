@@ -1,0 +1,37 @@
+#!/usr/bin/expect
+# note: requires the hydra CLI - install hydra first
+
+set client_id [lindex $argv 0]
+set client_secret [lindex $argv 1]
+set cluster [lindex $argv 2]
+
+if {[llength $argv] != 3} {
+  send_user "Usage: ./upload_keys.exp client_id client_secret cluster\n"
+  exit 1
+}
+
+spawn hydra connect
+
+expect {
+  timeout { send_user "\nFailed to get prompt\n"; exit 1 }
+  "*URL*"
+}
+send "$cluster\r"
+
+expect {
+  timeout { send_user "\nFailed to get prompt\n"; exit 1 }
+  "*ID*"
+}
+send "$client_id\r"
+
+expect {
+  timeout { send_user "\nFailed to get prompt\n"; exit 1 }
+  "*Secret*"
+}
+send "$client_secret\r"
+
+expect {
+  "Done."
+}
+
+send close
