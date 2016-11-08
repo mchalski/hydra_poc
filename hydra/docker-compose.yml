@@ -1,0 +1,53 @@
+version: '2'
+
+services:
+
+  hydra:
+    build:
+      context: .
+      dockerfile: Dockerfile-demo
+    links:
+      - postgresd:postgresd
+      - mysqld:mysqld
+    volumes:
+      - hydravolume:/root
+    ports:
+      - "4444:4444"
+      - "4445:4445"
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL}
+      - SYSTEM_SECRET=${SYSTEM_SECRET}
+      - CONSENT_URL=http://${DOCKER_IP}:3000
+      - DATABASE_URL=postgres://postgres:secret@postgresd:5432/postgres?sslmode=disable
+#     Uncomment the following line to use mysql instead.
+#      - DATABASE_URL=mysql://root:secret@tcp(mysqld:3306)/mysql?parseTime=true
+      - FORCE_ROOT_CLIENT_CREDENTIALS=admin:demo-password
+    restart: unless-stopped
+
+  consent:
+    environment:
+      - HYDRA_URL=http://hydra:4444
+      - HYDRA_CLIENT_ID=admin
+      - HYDRA_CLIENT_SECRET=demo-password
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+    image: oryam/hydra-idp-react
+    links:
+      - hydra
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  postgresd:
+    image: postgres:9.6
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret
+
+  mysqld:
+    image: mysql:5.7
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret
+
+volumes:
+  hydravolume:
+    driver: local
