@@ -1,0 +1,66 @@
+#!/bin/python2
+
+import urllib
+import urllib2
+import argparse
+import urlparse
+import logging
+import requests
+from requests.auth import HTTPBasicAuth
+from oauthlib.oauth2 import BackendApplicationClient
+from requests_oauthlib import OAuth2Session
+
+#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
+l = logging.getLogger('main')
+
+def main():
+    args = parse_args()
+    client_id = args.user
+    client_pass = args.password
+    url = args.address
+
+    token = get_token(client_id, client_pass, url)
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Upload (RSA) keys to Hydra.')
+
+    parser.add_argument('keypath',
+                        metavar='keypath',
+                        nargs=1,
+                        help='Path to the keyfile')
+    parser.add_argument('-u, --user',
+                        dest='user',
+                        action='store',
+                        required=True,
+                        help="Hydra's root Client ID")
+    parser.add_argument('-p, --password',
+                        dest='password',
+                        action='store',
+                        required=True,
+                        help="Hydra's root Client password")
+    parser.add_argument('-a, --address',
+                        dest='address',
+                        action='store',
+                        required=True,
+                        help="Hydra's cluster URL")
+    args = parser.parse_args()
+
+    return args
+
+# to modify Hydra's config, an OAuth Token is necessary
+# get it using the 'client credentials' flow
+def get_token(cid, csecret, url):
+    l.info('getting access token')
+
+    url = urlparse.urljoin(url, 'oauth2/token')
+    client = BackendApplicationClient(client_id=cid)
+    oauth = OAuth2Session(client=client)
+    token = oauth.fetch_token(token_url=url, verify=False, client_id=cid, client_secret=csecret, state='123412341')
+
+    l.info('getting access token ok: %s' % token['access_token'])
+
+    return token['access_token']
+
+if __name__ ==  "__main__":
+    main()
