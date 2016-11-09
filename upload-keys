@@ -27,9 +27,10 @@ def main():
     client_pass = args.password
     url = args.address
     keyname = args.keyname
+    print 'ASDFASDFASDF' + args.keypath[0]
 
     session = hydra_get_session(client_id, client_pass, url)
-    hydra_upload_key(session, url, keyname, args.keypath)
+    hydra_upload_key(session, url, keyname, args.keypath[0])
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Upload (RSA) keys to Hydra.')
@@ -85,18 +86,18 @@ def hydra_get_session(cid, csecret, url):
 
 def hydra_upload_key(session, url, keyname, keypath):
     l.info('trying to read keyfile')
+    content=''
+    with open(keypath, 'r') as f:
+            content = f.read()
     l.info('trying to read keyfile ok')
 
     l.info('trying to set hydra key')
+    url = urlparse.urljoin(url, 'keys/' + keyname)
+    r = session.put(url, content,   verify=False)
     l.info('trying to set hydra key ok')
 
-    l.info('verifying hydra key')
-    url = urlparse.urljoin(url, 'keys/' + keyname)
-    r = session.get(url, verify=False)
-
-    l.info('verifying hydra key ok: %s', r.content)
+def _hydra_make_key_msg(key):
     pass
-
 
 if __name__ ==  "__main__":
     main()
