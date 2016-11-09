@@ -10,24 +10,27 @@ from requests.auth import HTTPBasicAuth
 from oauthlib.oauth2 import BackendApplicationClient
 from requests_oauthlib import OAuth2Session
 
-def get_logger(lvl):
-    logging.basicConfig(level=lvl)
-    return logging.getLogger('main')
+from Crypto.PublicKey import RSA
+from jwkest.jwk import RSAKey
 
-l = get_logger(logging.INFO)
+# global logger
+logging.basicConfig(level=logging.INFO)
+l = logging.getLogger('main')
+
 
 def main():
     args = parse_args()
 
     if args.debug:
         global l
-        l = get_logger(logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG)
+        logging.getLogger("requests").setLevel(logging.DEBUG)
+        l = logging.getLogger('main')
 
     client_id = args.user
     client_pass = args.password
     url = args.address
     keyname = args.keyname
-    print 'ASDFASDFASDF' + args.keypath[0]
 
     session = hydra_get_session(client_id, client_pass, url)
     hydra_upload_key(session, url, keyname, args.keypath[0])
@@ -85,19 +88,51 @@ def hydra_get_session(cid, csecret, url):
     return session
 
 def hydra_upload_key(session, url, keyname, keypath):
+    #get jwk from from keypat
+    jwk = _pem_to_jwk(keyname, keypath)
+
+    #create json body from jwk
+    json = _hydra_make_json_body(jwk)
+
+    l.info('trying to set hydra key')
+    url = urlparse.urljoin(url, 'keys/' + keyname)
+    r = session.put(url, jwk, json=json, verify=False)
+    l.info('trying to set hydra key ok')
+
+def _hydra_make_json_body(jwk):
+    return {'keys':[jwk]}
+
+def _pem_to_jwk(keyname, keypath):
+    #get key content
     l.info('trying to read keyfile')
     content=''
     with open(keypath, 'r') as f:
             content = f.read()
+
+    #parse priv or pub key
+    if 'public' in keyname:
+        return _pem_to_jwk_pub(content)
+    else:
+        return _pem_to_jwk_priv(content)
+
     l.info('trying to read keyfile ok')
 
-    l.info('trying to set hydra key')
-    url = urlparse.urljoin(url, 'keys/' + keyname)
-    r = session.put(url, content,   verify=False)
-    l.info('trying to set hydra key ok')
-
-def _hydra_make_key_msg(key):
+def _pem_to_jwk_pub(content):
     pass
+
+def _pem_to_jwk_priv(content):
+    l.info('importing private key')
+    privkey = RSA.importKey(content)
+    jwk = RSAKey(kid="private", key=privkey)
+    l.info('importing private key ok')
+
+    #the jwk has no getitem/iteritem methods - manually rewrite it to dict
+    return {'kty': jwk.kty,
+            'kid': jwk.kid,
+            'n': jwk.n,
+            'q': jwk.q,
+            'p': jwk.p,
+            'd': jwk.d}
 
 if __name__ ==  "__main__":
     main()
