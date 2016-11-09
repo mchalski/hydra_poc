@@ -1,4 +1,5 @@
 #!/bin/python2
+# -*- coding: utf-8 -*-
 
 import urllib
 import urllib2
@@ -12,11 +13,11 @@ from requests_oauthlib import OAuth2Session
 
 from Crypto.PublicKey import RSA
 from jwkest.jwk import RSAKey
+from jwkest import long_to_base64
 
 # global logger
 logging.basicConfig(level=logging.INFO)
 l = logging.getLogger('main')
-
 
 def main():
     args = parse_args()
@@ -91,16 +92,10 @@ def hydra_upload_key(session, url, keyname, keypath):
     #get jwk from from keypat
     jwk = _pem_to_jwk(keyname, keypath)
 
-    #create json body from jwk
-    json = _hydra_make_json_body(jwk)
-
     l.info('trying to set hydra key')
     url = urlparse.urljoin(url, 'keys/' + keyname)
-    r = session.put(url, jwk, json=json, verify=False)
+    r = session.put(url, jwk, json=jwk, verify=False)
     l.info('trying to set hydra key ok')
-
-def _hydra_make_json_body(jwk):
-    return {'keys':[jwk]}
 
 def _pem_to_jwk(keyname, keypath):
     #get key content
@@ -129,10 +124,11 @@ def _pem_to_jwk_priv(content):
     #the jwk has no getitem/iteritem methods - manually rewrite it to dict
     return {'kty': jwk.kty,
             'kid': jwk.kid,
-            'n': jwk.n,
-            'q': jwk.q,
-            'p': jwk.p,
-            'd': jwk.d}
+            'n': long_to_base64(jwk.n),
+            'q': long_to_base64(jwk.q),
+            'p': long_to_base64(jwk.p),
+            'e': long_to_base64(jwk.e),
+            'd': long_to_base64(jwk.d)}
 
 if __name__ ==  "__main__":
     main()
