@@ -10,17 +10,26 @@ from requests.auth import HTTPBasicAuth
 from oauthlib.oauth2 import BackendApplicationClient
 from requests_oauthlib import OAuth2Session
 
-#logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(level=logging.INFO)
-l = logging.getLogger('main')
+def get_logger(lvl):
+    logging.basicConfig(level=lvl)
+    return logging.getLogger('main')
+
+l = get_logger(logging.INFO)
 
 def main():
     args = parse_args()
+
+    if args.debug:
+        global l
+        l = get_logger(logging.DEBUG)
+
     client_id = args.user
     client_pass = args.password
     url = args.address
+    keyname = args.keyname
 
-    token = get_token(client_id, client_pass, url)
+    session = hydra_get_session(client_id, client_pass, url)
+    hydra_upload_key(session, url, keyname, args.keypath)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Upload (RSA) keys to Hydra.')
@@ -44,23 +53,50 @@ def parse_args():
                         action='store',
                         required=True,
                         help="Hydra's cluster URL")
+    parser.add_argument('-k, --keyname',
+                        dest='keyname',
+                        action='store',
+                        required=True,
+                        help="JWK key name/URL, as defined by hydra, e.g. hydra.consent.response/public")
+    parser.add_argument('-d, --debug',
+                        dest='debug',
+                        action='store_true',
+                        default=False,
+                        required=False,
+                        help="Get debug dumps (esp. from the 'requests' lib)")
     args = parser.parse_args()
 
     return args
 
-# to modify Hydra's config, an OAuth Token is necessary
-# get it using the 'client credentials' flow
-def get_token(cid, csecret, url):
+# get an authorized oauth2 session, i.e.
+# perform the 'client credentials' oauth flow and get the token
+# the returned session is able to perform api requests to hydra
+def hydra_get_session(cid, csecret, url):
     l.info('getting access token')
 
     url = urlparse.urljoin(url, 'oauth2/token')
     client = BackendApplicationClient(client_id=cid)
-    oauth = OAuth2Session(client=client)
-    token = oauth.fetch_token(token_url=url, verify=False, client_id=cid, client_secret=csecret, state='123412341')
+    session = OAuth2Session(client=client)
+    token = session.fetch_token(token_url=url, scope=['hydra.keys.get'], verify=False, client_id=cid, client_secret=csecret, state='123412341')
 
     l.info('getting access token ok: %s' % token['access_token'])
 
-    return token['access_token']
+    return session
+
+def hydra_upload_key(session, url, keyname, keypath):
+    l.info('trying to read keyfile')
+    l.info('trying to read keyfile ok')
+
+    l.info('trying to set hydra key')
+    l.info('trying to set hydra key ok')
+
+    l.info('verifying hydra key')
+    url = urlparse.urljoin(url, 'keys/' + keyname)
+    r = session.get(url, verify=False)
+
+    l.info('verifying hydra key ok: %s', r.content)
+    pass
+
 
 if __name__ ==  "__main__":
     main()
