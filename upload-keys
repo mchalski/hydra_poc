@@ -82,7 +82,7 @@ def hydra_get_session(cid, csecret, url):
     url = urlparse.urljoin(url, 'oauth2/token')
     client = BackendApplicationClient(client_id=cid)
     session = OAuth2Session(client=client)
-    token = session.fetch_token(token_url=url, scope=['hydra.keys.set'], verify=False, client_id=cid, client_secret=csecret, state='123412341')
+    token = session.fetch_token(token_url=url, scope=['hydra.keys'], verify=False, client_id=cid, client_secret=csecret, state='123412341')
 
     l.info('getting access token ok: %s' % token['access_token'])
 
