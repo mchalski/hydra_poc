@@ -113,7 +113,16 @@ def _pem_to_jwk(keyname, keypath):
     l.info('trying to read keyfile ok')
 
 def _pem_to_jwk_pub(content):
-    pass
+    l.info('importing public key')
+    pubkey = RSA.importKey(content)
+    jwk = RSAKey(kid="public", key=pubkey)
+    l.info('importing public key ok')
+
+    #the jwk has no getitem/iteritem methods - manually rewrite it to dict
+    return {'kty': jwk.kty,
+            'kid': jwk.kid,
+            'n': long_to_base64(jwk.n),
+            'e': long_to_base64(jwk.e)}
 
 def _pem_to_jwk_priv(content):
     l.info('importing private key')
