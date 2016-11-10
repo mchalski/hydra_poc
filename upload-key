@@ -83,18 +83,19 @@ def hydra_get_session(cid, csecret, url):
     client = BackendApplicationClient(client_id=cid)
     session = OAuth2Session(client=client)
     token = session.fetch_token(token_url=url, scope=['hydra.keys'], verify=False, client_id=cid, client_secret=csecret, state='123412341')
-
+    print token
     l.info('getting access token ok: %s' % token['access_token'])
 
     return session
 
 def hydra_upload_key(session, url, keyname, keypath):
-    #get jwk from from keypat
+    #get jwk from from keypath
     jwk = _pem_to_jwk(keyname, keypath)
 
     l.info('trying to set hydra key')
     url = urlparse.urljoin(url, 'keys/' + keyname)
     r = session.put(url, json=jwk, verify=False)
+    r.raise_for_status()
     l.info('trying to set hydra key ok')
 
 def _pem_to_jwk(keyname, keypath):
